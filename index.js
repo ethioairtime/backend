@@ -20,10 +20,49 @@ app.use(express.json());
 
 
 // mongodb connection
-const MONGO_URI = "mongodb+srv://bereketkassahun456_db_user:IkhRH846oNDjzELq@cluster0.hdyxpts.mongodb.net/package_buyer?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(MONGO_URI, {})
-    .then(() => console.log("Connected to MongoDB Atlas"))
-    .catch((err) => console.error("MongoDB connection error:", err));
+// Provide MONGO_URI via environment variable for security.
+// Example format (SRV): mongodb+srv://<username>:<password>@<cluster-url>/<database>?retryWrites=true&w=majority
+const MONGO_URI = process.env.MONGO_URI;
+
+function maskMongoUri(uri) {
+    if (!uri) return uri;
+    try {
+        // mask password between : and @
+        return uri.replace(/:(.*)@/, ':*****@');
+    } catch (e) {
+        return uri;
+    }
+}
+
+async function connectWithRetry(maxRetries = 5, delayMs = 3000) {
+    if (!MONGO_URI) {
+        console.error('MONGO_URI is not set. Please set it in your .env or environment variables.');
+        return;
+    }
+
+    let attempt = 0;
+    while (attempt < maxRetries) {
+        try {
+            attempt++;
+            console.log(`Attempting MongoDB connection (attempt ${attempt}/${maxRetries}) to ${maskMongoUri(MONGO_URI)}`);
+            await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+            console.log('Connected to MongoDB Atlas');
+            return;
+        } catch (err) {
+            console.error(`MongoDB connection attempt ${attempt} failed:`);
+            // Log a compact error message helpful for diagnosis
+            console.error(err && err.message ? err.message : err);
+            if (attempt < maxRetries) {
+                console.log(`Retrying in ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
+            } else {
+                console.error('All MongoDB connection attempts failed. Check your MONGO_URI, network access (IP whitelist), and Atlas cluster status.');
+            }
+        }
+    }
+}
+
+connectWithRetry();
 
 
 // req header with chapa secret key

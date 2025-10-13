@@ -67,20 +67,55 @@ app.post("/api/pay", async (req, res) => {
             .then((response) => {
                 // res.redirect(response.data.data.checkout_url)
                 console.log("Checkout url:", response.data.data.checkout_url)
-                res.json({checkoutUrl: response.data.data.checkout_url});
+                res.json({checkoutUrl: response.data.data.checkout_url, text_ref: TEXT_REF});
             })
             .catch((err) => console.log(err))
 })
 
 // verification endpoint
 app.get("/api/verify-payment/:id", async (req, res) => {
-    
-        //verify the transaction 
-        await axios.get("https://api.chapa.co/v1/transaction/verify/" + req.params.id, config)
-            .then((response) => {
-                console.log("Payment was successfully verified")
-            }) 
-            .catch((err) => console.log("Payment can't be verfied", err))
+    try {
+        // verify the transaction
+        const response = await axios.get("https://api.chapa.co/v1/transaction/verify/" + req.params.id, config);
+        const body = response.data;
+        // Expected response shape (example): { message, status: 'success', data: { email, amount, charge, status, ... } }
+        if (!body) return res.status(500).json({ error: 'Empty response from Chapa' });
+
+        // Check overall and payment status
+        const ok = body.status === 'success' || (body.data && body.data.status === 'success');
+        if (!ok) {
+            console.log('Payment verification failed or returned non-success status', body);
+            return res.status(400).json({ error: 'Payment not successful', verification: body });
+        }
+
+        const data = body.data || {};
+        const email = data.email;
+        const amount = Number(data.amount) || 0;
+        const charge = Number(data.charge) || 0;
+        const net = amount - charge;
+
+        if (!email) {
+            console.log('Verified payment missing email, cannot update wallet', data);
+            return res.status(400).json({ error: 'Verified payment missing email' });
+        }
+
+        // Find user and update wallet
+        const user = await User.findOne({ email });
+        if (!user) {
+            console.log('User not found for email', email);
+            return res.status(404).json({ error: 'User not found', email });
+        }
+
+        user.wallet = (user.wallet || 0) + net;
+        await user.save();
+
+        console.log(`Wallet updated for ${email}: +${net} (amount ${amount} - charge ${charge})`);
+        return res.json({ message: 'Payment verified and wallet updated', email, amount, charge, net, user });
+
+    } catch (err) {
+        console.error('Payment verification error', err && err.message ? err.message : err);
+        return res.status(500).json({ error: 'Payment verification error', details: err && err.message ? err.message : err });
+    }
 })
 
 // Create user endpoint

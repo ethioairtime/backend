@@ -42,8 +42,8 @@ app.get('/', (req, res) => {
 // initial payment endpoint
 app.post("/api/pay", async (req, res) => {
          // chapa redirect you to this url when payment is successful
-        const CALLBACK_URL = "http://localhost:4400/api/verify-payment/"
-        const RETURN_URL = "http://localhost:4400/api/payment-success/"
+        const CALLBACK_URL = "https://package-buyer-backend.vercel.app/api/verify-payment/"
+        const RETURN_URL = "https://package-buyer-backend.vercel.app/api/payment-success/"
 
         // a unique reference given to every transaction
         const TEXT_REF = "tx-myecommerce12345-" + Date.now()

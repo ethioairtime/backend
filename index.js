@@ -1,16 +1,18 @@
 /* 
-    CHAPA API PAYMENT INTEGRATION
+    PACKAGE BUYER BACKEND AND CHAPA API PAYMENT INTEGRATION
     Required: Chapa secret key || GET THE KEY BY REGISTERING @ https://dashboard.chapa.co/register
 */
 
 const mongoose = require("mongoose");
-
 const express = require("express");
 const { User } = require("./schema/user");
+
 const app = express()
 
 const axios = require("axios").default
+
 require("dotenv").config()
+
 const PORT = process.env.PORT || 4400
 
 const CHAPA_URL = process.env.CHAPA_URL || "https://api.chapa.co/v1/transaction/initialize"
@@ -18,52 +20,12 @@ const CHAPA_AUTH = process.env.CHAPA_AUTH  || "CHASECK_TEST-Kj2iK6nWtlpa6yyV9Z2z
 
 app.use(express.json());
 
-
 // mongodb connection
-// Provide MONGO_URI via environment variable for security.
-// Example format (SRV): mongodb+srv://<username>:<password>@<cluster-url>/<database>?retryWrites=true&w=majority
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = "mongodb+srv://bereketkassahun456_db_user:SD7UI4EDbahaJfHe@cluster0.hdyxpts.mongodb.net/package_buyer?retryWrites=true&w=majority";
 
-function maskMongoUri(uri) {
-    if (!uri) return uri;
-    try {
-        // mask password between : and @
-        return uri.replace(/:(.*)@/, ':*****@');
-    } catch (e) {
-        return uri;
-    }
-}
-
-async function connectWithRetry(maxRetries = 5, delayMs = 3000) {
-    if (!MONGO_URI) {
-        console.error('MONGO_URI is not set. Please set it in your .env or environment variables.');
-        return;
-    }
-
-    let attempt = 0;
-    while (attempt < maxRetries) {
-        try {
-            attempt++;
-            console.log(`Attempting MongoDB connection (attempt ${attempt}/${maxRetries}) to ${maskMongoUri(MONGO_URI)}`);
-            await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-            console.log('Connected to MongoDB Atlas');
-            return;
-        } catch (err) {
-            console.error(`MongoDB connection attempt ${attempt} failed:`);
-            // Log a compact error message helpful for diagnosis
-            console.error(err && err.message ? err.message : err);
-            if (attempt < maxRetries) {
-                console.log(`Retrying in ${delayMs}ms...`);
-                await new Promise(r => setTimeout(r, delayMs));
-            } else {
-                console.error('All MongoDB connection attempts failed. Check your MONGO_URI, network access (IP whitelist), and Atlas cluster status.');
-            }
-        }
-    }
-}
-
-connectWithRetry();
-
+mongoose.connect(MONGO_URI, {})
+    .then(() => console.log("Connected to MongoDB Atlas"))
+    .catch((err) => console.error("MongoDB connection error:", err));
 
 // req header with chapa secret key
 const config = {
@@ -74,12 +36,11 @@ const config = {
 
 // entry for the front end
 app.get('/', (req, res) => {
-    res.render("index")
+    res.send('package buyer backend')
 })
 
 // initial payment endpoint
 app.post("/api/pay", async (req, res) => {
-
          // chapa redirect you to this url when payment is successful
         const CALLBACK_URL = "http://localhost:4400/api/verify-payment/"
         const RETURN_URL = "http://localhost:4400/api/payment-success/"
@@ -123,8 +84,6 @@ app.get("/api/verify-payment/:id", async (req, res) => {
 })
 
 // Create user endpoint
-
-// Create user endpoint
 app.post("/api/create-user", async (req, res) => {
     try {
         const { email, first_name, last_name, phone_number, wallet } = req.body;
@@ -153,6 +112,5 @@ app.post("/api/check-user", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
 
 app.listen(PORT, () => console.log("Server listening on port:", PORT))

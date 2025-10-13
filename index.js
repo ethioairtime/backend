@@ -49,14 +49,15 @@ app.post("/api/pay", async (req, res) => {
         const TEXT_REF = "tx-myecommerce12345-" + Date.now()
 
         const amount = req.body?.amount;
-        console.log("Amount:", req.body);
+        
+        const { email, first_name, last_name, phone_number, wallet } = req.body;
         // form data
         const data = {
             amount: amount, 
             currency: 'ETB',
-            email: 'ato@ekele.com',
-            first_name: 'Ato',
-            last_name: 'Ekele',
+            email: email,
+            first_name: first_name,
+            last_name: last_name,
             tx_ref: TEXT_REF,
             callback_url: CALLBACK_URL + TEXT_REF,
             return_url: RETURN_URL

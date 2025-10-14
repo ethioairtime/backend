@@ -6,6 +6,7 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const { User } = require("./schema/user");
+const { Order } = require("./schema/order");
 
 const app = express()
 
@@ -146,6 +147,42 @@ app.post("/api/check-user", async (req, res) => {
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// buy package endpoint
+app.post('/api/buy-package', async (req, res) => {
+    try {
+        const { email, amount, phone_number } = req.body;
+        if (!email || typeof amount === 'undefined') {
+            return res.status(400).json({ error: 'email and amount are required' });
+        }
+
+        const numericAmount = Number(amount);
+        if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ error: 'amount must be a positive number' });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const wallet = Number(user.wallet || 0);
+        if (wallet < numericAmount) {
+            return res.status(400).json({ error: 'Insufficient wallet balance' });
+        }
+
+        // Deduct wallet and save
+        user.wallet = wallet - numericAmount;
+        await user.save();
+
+        // Create order record
+        const order = new Order({ email, amount: numericAmount, phone_number, status: 'paid' });
+        await order.save();
+
+        return res.status(201).json({ message: 'Package purchased', order, user });
+    } catch (err) {
+        console.error('Buy package error', err && err.message ? err.message : err);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 

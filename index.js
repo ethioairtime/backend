@@ -179,7 +179,7 @@ app.post('/api/buy-package', async (req, res) => {
         const order = new Order({ email, amount: numericAmount, phone_number, status: 'paid' });
         await order.save();
 
-        return res.status(201).json({ message: 'Package purchased', order, user });
+        return res.status(200).json({ message: 'Package purchased', order, user });
     } catch (err) {
         console.error('Buy package error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });

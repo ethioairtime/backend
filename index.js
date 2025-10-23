@@ -123,8 +123,8 @@ app.get("/api/verify-payment/:id", async (req, res) => {
 // Create user endpoint
 app.post("/api/create-user", async (req, res) => {
     try {
-        const { email, first_name, last_name, phone_number, wallet } = req.body;
-        const user = new User({ email, first_name, last_name, phone_number, wallet });
+        const { email, phone_number, wallet } = req.body;
+        const user = new User({ email, phone_number, wallet });
         await user.save();
         res.status(201).json({ message: "User created successfully", user });
     } catch (err) {
@@ -150,27 +150,6 @@ app.post("/api/check-user", async (req, res) => {
     }
 });
 
-// login endpoint
-app.post('/api/login', async (req, res) => {
-    try {
-        const { email, phone_number } = req.body;
-        if (!email && !phone_number) {
-            return res.status(400).json({ error: 'email or phone_number is required' });
-        }
-
-        const query = {};
-        if (email) query.email = email;
-        if (phone_number) query.phone_number = phone_number;
-
-        const user = await User.findOne(query);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        return res.status(200).json({ message: 'User found', user });
-    } catch (err) {
-        console.error('Login error', err && err.message ? err.message : err);
-        return res.status(500).json({ error: 'Internal server error' });
-    }
-});
 
 // buy package endpoint
 app.post('/api/buy-package', async (req, res) => {

@@ -135,12 +135,12 @@ app.post("/api/create-user", async (req, res) => {
 // Check if user exists endpoint
 app.post("/api/check-user", async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, phone_number } = req.body;
         if (!email) {
             return res.status(400).json({ error: "Email is required" });
         }
         const user = await User.findOne({ email });
-        if (user) {
+        if (user && user.phone_number === phone_number) {
             res.json({ exists: true, user });
         } else {
             res.json({ exists: false });

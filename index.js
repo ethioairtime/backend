@@ -22,7 +22,8 @@ const CHAPA_AUTH = process.env.CHAPA_AUTH  || "CHASECK_TEST-9LQQkOIge3B01HaSlVtd
 app.use(express.json());
 
 // mongodb connection
-const MONGO_URI = "mongodb+srv://bereketkassahun456_db_user:SD7UI4EDbahaJfHe@cluster0.hdyxpts.mongodb.net/package_buyer?retryWrites=true&w=majority";
+const MONGO_URI = "mongodb+srv://airtime:vFz266J6aAWSrX8@cluster0.y5muu17.mongodb.net/?appName=Cluster0";
+// const MONGO_URI = "mongodb+srv://airtime:vFz266J6aAWSrX8@cluster0.hdyxpts.mongodb.net/airtime?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI, {})
     .then(() => console.log("Connected to MongoDB Atlas"))

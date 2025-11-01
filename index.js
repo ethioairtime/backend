@@ -17,7 +17,7 @@ require("dotenv").config()
 const PORT = process.env.PORT || 4400
 
 const CHAPA_URL = process.env.CHAPA_URL || "https://api.chapa.co/v1/transaction/initialize"
-const CHAPA_AUTH = process.env.CHAPA_AUTH  || "CHASECK_TEST-Kj2iK6nWtlpa6yyV9Z2zS8u62Nw3Mx8o"
+const CHAPA_AUTH = process.env.CHAPA_AUTH  || "CHASECK_TEST-9LQQkOIge3B01HaSlVtdZrj5Vcg29272"
 
 app.use(express.json());
 

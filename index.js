@@ -1,5 +1,5 @@
 /* 
-    PACKAGE BUYER BACKEND AND CHAPA API PAYMENT INTEGRATION
+    TELE CARD BUYER BACKEND AND CHAPA API PAYMENT INTEGRATION
     Required: Chapa secret key || GET THE KEY BY REGISTERING @ https://dashboard.chapa.co/register
 */
 
@@ -38,7 +38,7 @@ const config = {
 
 // entry for the front end
 app.get('/', (req, res) => {
-    res.send('package buyer backend')
+    res.send('Ethio tele card backend')
 })
 
 // initial payment endpoint
@@ -152,8 +152,8 @@ app.post("/api/check-user", async (req, res) => {
 });
 
 
-// buy package endpoint
-app.post('/api/buy-package', async (req, res) => {
+// buy tele card endpoint
+app.post('/api/buy-tele-card', async (req, res) => {
     try {
         const { email, amount, phone_number } = req.body;
         if (!email || typeof amount === 'undefined') {
@@ -181,9 +181,9 @@ app.post('/api/buy-package', async (req, res) => {
         const order = new Order({ email, amount: numericAmount, phone_number, status: 'paid' });
         await order.save();
 
-        return res.status(200).json({ message: 'Package purchased', order, user });
+        return res.status(200).json({ message: 'Tele card purchased', order, user });
     } catch (err) {
-        console.error('Buy package error', err && err.message ? err.message : err);
+        console.error('Buy tele card error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

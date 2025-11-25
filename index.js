@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const { User } = require("./schema/user");
 const { Order } = require("./schema/order");
+const { CbeQueue } = require("./schema/cbe_queue");
 
 const app = express()
 
@@ -184,6 +185,103 @@ app.post('/api/buy-tele-card', async (req, res) => {
         return res.status(200).json({ message: 'Tele card purchased', order, user });
     } catch (err) {
         console.error('Buy tele card error', err && err.message ? err.message : err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Upload SMS endpoint
+app.post('/api/upload_sms', async (req, res) => {
+    try {
+        const { reference_number, amount } = req.body;
+        
+        if (!reference_number) {
+            return res.status(400).json({ error: 'reference_number is required' });
+        }
+        
+        if (typeof amount === 'undefined' || amount === null) {
+            return res.status(400).json({ error: 'amount is required' });
+        }
+
+        const numericAmount = Number(amount);
+        if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ error: 'amount must be a positive number' });
+        }
+
+        // Create new SMS entry in cbe_queue
+        const sms = new CbeQueue({
+            reference_number,
+            amount: numericAmount,
+            verified: false
+        });
+        
+        await sms.save();
+
+        return res.status(200).json({ 
+            message: 'SMS registered successfully', 
+            sms: {
+                reference_number: sms.reference_number,
+                amount: sms.amount,
+                verified: sms.verified,
+                created_at: sms.created_at
+            }
+        });
+    } catch (err) {
+        console.error('Upload SMS error', err && err.message ? err.message : err);
+        if (err.code === 11000) {
+            return res.status(400).json({ error: 'SMS with this reference_number already exists' });
+        }
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Check SMS endpoint
+app.post('/api/check_sms', async (req, res) => {
+    try {
+        const { reference_number, phone_number } = req.body;
+        
+        if (!reference_number) {
+            return res.status(400).json({ error: 'reference_number is required' });
+        }
+
+        if (!phone_number) {
+            return res.status(400).json({ error: 'phone_number is required' });
+        }
+
+        // Find SMS in cbe_queue with the reference_number and verified: false
+        const sms = await CbeQueue.findOne({ reference_number, verified: false });
+        
+        if (!sms) {
+            return res.status(404).json({ error: 'SMS with the given reference_number not found or already verified' });
+        }
+
+        // Find user by phone number
+        const user = await User.findOne({ phone_number });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found with the given phone_number' });
+        }
+
+        // Mark the SMS as verified
+        sms.verified = true;
+        await sms.save();
+
+        // Update user wallet with SMS amount
+        user.wallet = (user.wallet || 0) + sms.amount;
+        await user.save();
+
+        // Return the amount and updated wallet
+        return res.status(200).json({ 
+            message: 'SMS verified successfully and wallet updated', 
+            amount: sms.amount,
+            reference_number: sms.reference_number,
+            verified: sms.verified,
+            user: {
+                email: user.email,
+                phone_number: user.phone_number,
+                wallet: user.wallet
+            }
+        });
+    } catch (err) {
+        console.error('Check SMS error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const cbeQueueSchema = new mongoose.Schema({
-    reference_number: { type: String, required: true },
+    reference_number: { type: String, required: true, unique: true },
     amount: { type: Number, required: true },
     verified: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now }

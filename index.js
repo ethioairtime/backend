@@ -211,7 +211,9 @@ app.post('/api/upload_sms', async (req, res) => {
         const sms = new CbeQueue({
             reference_number,
             amount: numericAmount,
-            verified: false
+            phone_number: "0946722851",
+            paid: false,
+            verified: false,
         });
         
         await sms.save();
@@ -290,7 +292,7 @@ app.post('/api/check_sms', async (req, res) => {
 app.get('/api/unpaid_queue', async (req, res) => {
     try {
         // Find all SMS in cbe_queue with verified: false
-        const unpaidSms = await CbeQueue.find({ verified: false });
+        const unpaidSms = await CbeQueue.find({ paid: false, verified: true });
         
         return res.status(200).json({ 
             message: 'Unpaid queue retrieved successfully',
@@ -306,7 +308,7 @@ app.get('/api/unpaid_queue', async (req, res) => {
 // Verify SMS endpoint
 app.post('/api/verify_sms', async (req, res) => {
     try {
-        const { reference_number } = req.body;
+        const { reference_number, phone_number } = req.body;
         
         if (!reference_number) {
             return res.status(400).json({ error: 'reference_number is required' });
@@ -321,6 +323,7 @@ app.post('/api/verify_sms', async (req, res) => {
 
         // Update the SMS to verified: true
         sms.verified = true;
+        sms.phone_number = phone_number;
         await sms.save();
 
         return res.status(200).json({ 

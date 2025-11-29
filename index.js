@@ -286,4 +286,53 @@ app.post('/api/check_sms', async (req, res) => {
     }
 });
 
+// Get unpaid queue endpoint
+app.get('/api/unpaid_queue', async (req, res) => {
+    try {
+        // Find all SMS in cbe_queue with verified: false
+        const unpaidSms = await CbeQueue.find({ verified: false });
+        
+        return res.status(200).json({ 
+            message: 'Unpaid queue retrieved successfully',
+            count: unpaidSms.length,
+            unpaid_queue: unpaidSms
+        });
+    } catch (err) {
+        console.error('Get unpaid queue error', err && err.message ? err.message : err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Verify SMS endpoint
+app.post('/api/verify_sms', async (req, res) => {
+    try {
+        const { reference_number } = req.body;
+        
+        if (!reference_number) {
+            return res.status(400).json({ error: 'reference_number is required' });
+        }
+
+        // Find SMS in cbe_queue with the reference_number
+        const sms = await CbeQueue.findOne({ reference_number });
+        
+        if (!sms) {
+            return res.status(404).json({ error: 'SMS with the given reference_number not found' });
+        }
+
+        // Update the SMS to verified: true
+        sms.verified = true;
+        await sms.save();
+
+        return res.status(200).json({ 
+            message: 'SMS verified successfully', 
+            reference_number: sms.reference_number,
+            amount: sms.amount,
+            verified: sms.verified
+        });
+    } catch (err) {
+        console.error('Verify SMS error', err && err.message ? err.message : err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 app.listen(PORT, () => console.log("Server listening on port:", PORT))

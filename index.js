@@ -273,7 +273,7 @@ app.post('/api/check_sms', async (req, res) => {
 
         // Return the amount and updated wallet
         return res.status(200).json({ 
-            message: `Reference Number verified successfully, ${sms.amount} was added to your wallet`, 
+            message: `Reference Number verified successfully, ETB ${sms.amount} was added to your wallet`, 
             amount: sms.amount,
             reference_number: sms.reference_number,
             verified: sms.verified,

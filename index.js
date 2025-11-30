@@ -211,7 +211,7 @@ app.post('/api/upload_sms', async (req, res) => {
         const sms = new CbeQueue({
             reference_number,
             amount: numericAmount,
-            phone_number: "0946722851",
+            phone_number: "",
             paid: false,
             verified: false,
         });

@@ -190,42 +190,55 @@ app.post('/api/buy-tele-card', async (req, res) => {
     }
 });
 
-// Upload Telebirr SMS endpoint
+// Upload Telebirr SMS endpoint (supports single object or array of objects)
 app.post('/api/upload-telebirr-sms', async (req, res) => {
     try {
-        const { reference_number, amount } = req.body;
-        
-        if (!reference_number) {
-            return res.status(400).json({ error: 'reference_number is required' });
-        }
-        
-        if (typeof amount === 'undefined' || amount === null) {
-            return res.status(400).json({ error: 'amount is required' });
+        // Normalize to array; req.body can be a single object or an array
+        const items = Array.isArray(req.body) ? req.body : [req.body];
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: 'Request body must be a non-empty array or object' });
         }
 
-        const numericAmount = Number(amount);
-        if (Number.isNaN(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ error: 'amount must be a positive number' });
+        const docs = [];
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i] || {};
+            const { reference_number, amount } = item;
+
+            if (!reference_number) {
+                return res.status(400).json({ error: `reference_number is required for item at index ${i}` });
+            }
+
+            if (typeof amount === 'undefined' || amount === null) {
+                return res.status(400).json({ error: `amount is required for item at index ${i}` });
+            }
+
+            const numericAmount = Number(amount);
+            if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+                return res.status(400).json({ error: `amount must be a positive number for item at index ${i}` });
+            }
+
+            docs.push({
+                reference_number,
+                amount: numericAmount,
+                phone_number: "",
+                verified: false,
+            });
         }
 
-        // Create new SMS entry in cbe_queue
-        const sms = new TelebirrSms({
-            reference_number,
-            amount: numericAmount,
-            phone_number: "",
-            verified: false,
-        });
-        
-        await sms.save();
+        // Bulk insert all SMS entries
+        const inserted = await TelebirrSms.insertMany(docs);
 
-        return res.status(200).json({ 
-            message: 'SMS registered successfully', 
-            sms: sms
+        return res.status(200).json({
+            message: 'SMS registered successfully',
+            count: inserted.length,
+            sms: inserted,
         });
     } catch (err) {
         console.error('Upload SMS error', err && err.message ? err.message : err);
         if (err.code === 11000) {
-            return res.status(400).json({ error: 'SMS with this reference_number already exists' });
+            return res.status(400).json({ error: 'One or more SMS with these reference_numbers already exist' });
         }
         return res.status(500).json({ error: 'Internal server error' });
     }

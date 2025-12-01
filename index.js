@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const { User } = require("./schema/user");
 const { Order } = require("./schema/order");
-const { CbeQueue } = require("./schema/cbe_queue");
+const { TelebirrSms } = require("./schema/telebirr-sms");
 
 const app = express()
 
@@ -156,9 +156,9 @@ app.post("/api/check-user", async (req, res) => {
 // buy tele card endpoint
 app.post('/api/buy-tele-card', async (req, res) => {
     try {
-        const { email, amount, phone_number } = req.body;
-        if (!email || typeof amount === 'undefined') {
-            return res.status(400).json({ error: 'email and amount are required' });
+        const { amount, phone_number } = req.body;
+        if (typeof amount === 'undefined') {
+            return res.status(400).json({ error: 'amount is required' });
         }
 
         const numericAmount = Number(amount);
@@ -166,7 +166,7 @@ app.post('/api/buy-tele-card', async (req, res) => {
             return res.status(400).json({ error: 'amount must be a positive number' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone_number });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         const wallet = Number(user.wallet || 0);
@@ -179,18 +179,18 @@ app.post('/api/buy-tele-card', async (req, res) => {
         await user.save();
 
         // Create order record
-        const order = new Order({ email, amount: numericAmount, phone_number, status: 'paid' });
+        const order = new Order({ amount: numericAmount, phone_number, sent: false });
         await order.save();
 
-        return res.status(200).json({ message: 'Tele card purchased', order, user });
+        return res.status(200).json({ message: 'Tele card purchased!, you will get confirmation message in few seconds', order, user });
     } catch (err) {
         console.error('Buy tele card error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Upload SMS endpoint
-app.post('/api/upload_sms', async (req, res) => {
+// Upload Telebirr SMS endpoint
+app.post('/api/upload-telebirr-sms', async (req, res) => {
     try {
         const { reference_number, amount } = req.body;
         
@@ -208,11 +208,10 @@ app.post('/api/upload_sms', async (req, res) => {
         }
 
         // Create new SMS entry in cbe_queue
-        const sms = new CbeQueue({
+        const sms = new TelebirrSms({
             reference_number,
             amount: numericAmount,
             phone_number: "",
-            paid: false,
             verified: false,
         });
         
@@ -220,12 +219,7 @@ app.post('/api/upload_sms', async (req, res) => {
 
         return res.status(200).json({ 
             message: 'SMS registered successfully', 
-            sms: {
-                reference_number: sms.reference_number,
-                amount: sms.amount,
-                verified: sms.verified,
-                created_at: sms.created_at
-            }
+            sms: sms
         });
     } catch (err) {
         console.error('Upload SMS error', err && err.message ? err.message : err);
@@ -236,8 +230,8 @@ app.post('/api/upload_sms', async (req, res) => {
     }
 });
 
-// Check SMS endpoint
-app.post('/api/check_sms', async (req, res) => {
+// Verify Telebirr SMS endpoint
+app.post('/api/verify-telebirr-sms', async (req, res) => {
     try {
         const { reference_number, phone_number } = req.body;
         
@@ -250,7 +244,7 @@ app.post('/api/check_sms', async (req, res) => {
         }
 
         // Find SMS in cbe_queue with the reference_number and verified: false
-        const sms = await CbeQueue.findOne({ reference_number, verified: false });
+        const sms = await TelebirrSms.findOne({ reference_number, verified: false });
         
         if (!sms) {
             return res.status(404).json({ error: 'SMS with the given reference_number not found or already verified' });
@@ -277,11 +271,7 @@ app.post('/api/check_sms', async (req, res) => {
             amount: sms.amount,
             reference_number: sms.reference_number,
             verified: sms.verified,
-            user: {
-                email: user.email,
-                phone_number: user.phone_number,
-                wallet: user.wallet
-            }
+            user: user
         });
     } catch (err) {
         console.error('Check SMS error', err && err.message ? err.message : err);
@@ -289,52 +279,48 @@ app.post('/api/check_sms', async (req, res) => {
     }
 });
 
-// Get unpaid queue endpoint
-app.get('/api/unpaid_queue', async (req, res) => {
+// Get unsent orders queue endpoint
+app.get('/api/unsent-orders-queue', async (req, res) => {
     try {
-        // Find all SMS in cbe_queue with verified: false
-        const unpaidSms = await CbeQueue.find({ paid: false, verified: true });
+        // Find all orders with sent: false
+        const unsentOrders = await Order.find({ sent: false });
         
         return res.status(200).json({ 
-            message: 'Unpaid queue retrieved successfully',
-            count: unpaidSms.length,
-            unpaid_queue: unpaidSms
+            message: 'Unsent orders queue retrieved successfully',
+            count: unsentOrders.length,
+            unsent_orders: unsentOrders
         });
     } catch (err) {
-        console.error('Get unpaid queue error', err && err.message ? err.message : err);
+        console.error('Get unsent orders queue error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Verify SMS endpoint
-app.post('/api/mark_sms_paid', async (req, res) => {
+app.post('/api/mark-order-sent', async (req, res) => {
     try {
-        const { reference_number } = req.body;
+        const { _id } = req.body;
         
-        if (!reference_number) {
-            return res.status(400).json({ error: 'reference_number is required' });
+        if (!_id) {
+            return res.status(400).json({ error: '_id is required' });
         }
 
-        // Find SMS in cbe_queue with the reference_number
-        const sms = await CbeQueue.findOne({ reference_number });
+        // Find order in orders with the _id
+        const order = await Order.findOne({ _id });
         
-        if (!sms) {
-            return res.status(404).json({ error: 'SMS with the given reference_number not found' });
+        if (!order) {
+            return res.status(404).json({ error: 'order with the given _id not found' });
         }
 
-        // Update the SMS to verified: true
-        sms.paid = true;
-        await sms.save();
+        // Update the order to sent: true
+        order.sent = true;
+        await order.save();
 
         return res.status(200).json({ 
-            message: 'SMS marked paid successfully', 
-            reference_number: sms.reference_number,
-            amount: sms.amount,
-            verified: sms.verified,
-            paid: sms.paid,
+            message: 'order marked sent successfully', 
+            order: order
         });
     } catch (err) {
-        console.error('Verify SMS error', err && err.message ? err.message : err);
+        console.error('sending order error', err && err.message ? err.message : err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

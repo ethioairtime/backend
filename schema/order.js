@@ -1,10 +1,9 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-    email: { type: String, required: true },
     amount: { type: Number, required: true },
     phone_number: { type: String },
-    status: { type: String, default: 'paid' },
+    sent: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now }
 });
 

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const cbeQueueSchema = new mongoose.Schema({
+const telebirrSmsSchema = new mongoose.Schema({
     reference_number: { type: String, required: true, unique: true },
     amount: { type: Number, required: true },
     phone_number:  { type: String },
@@ -9,7 +9,6 @@ const cbeQueueSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now }
 });
 
-const CbeQueue = mongoose.model('CbeQueue', cbeQueueSchema);
+const TelebirrSms = mongoose.model('TelebirrSms', telebirrSmsSchema);
 
-module.exports = { cbeQueueSchema, CbeQueue };
-
+module.exports = { telebirrSmsSchema, TelebirrSms };

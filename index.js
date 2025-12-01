@@ -230,11 +230,11 @@ app.post('/api/upload-telebirr-sms', async (req, res) => {
         // Bulk insert all SMS entries
         const inserted = await TelebirrSms.insertMany(docs);
 
-        return res.status(200).json({
+        return res.status(200).json([{
             message: 'SMS registered successfully',
             count: inserted.length,
             sms: inserted,
-        });
+        }]);
     } catch (err) {
         console.error('Upload SMS error', err && err.message ? err.message : err);
         if (err.code === 11000) {

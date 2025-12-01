@@ -243,13 +243,48 @@ app.post('/api/verify-telebirr-sms', async (req, res) => {
             return res.status(400).json({ error: 'phone_number is required' });
         }
 
-        // Find SMS in cbe_queue with the reference_number and verified: false
-        const sms = await TelebirrSms.findOne({ reference_number, verified: false });
+        // Normalize reference number (trim + uppercase)
+        const normalizedRef = (reference_number || "").trim().toUpperCase();
+
+        // Generate possible variants to handle OCR confusions (I/1, O/0, B/8)
+        const generateReferenceVariants = (ref) => {
+            const confusionMap = {
+                I: ["I", "1"],
+                1: ["1", "I"],
+                O: ["O", "0"],
+                0: ["0", "O"],
+                B: ["B", "8"],
+                8: ["8", "B"],
+            };
+
+            let variants = [""];
+
+            for (const ch of ref) {
+                const options = confusionMap[ch] || [ch];
+                const next = [];
+                for (const prefix of variants) {
+                    for (const opt of options) {
+                        next.push(prefix + opt);
+                    }
+                }
+                variants = next;
+            }
+
+            // Remove duplicates just in case
+            return Array.from(new Set(variants));
+        };
+
+        const referenceCandidates = generateReferenceVariants(normalizedRef);
+
+        // Find SMS in TelebirrSms with any of the candidate reference_numbers and verified: false
+        const sms = await TelebirrSms.findOne({
+            reference_number: { $in: referenceCandidates },
+            verified: false,
+        });
         
         if (!sms) {
-            return res.status(404).json({ error: 'SMS with the given reference_number not found or already verified' });
+            return res.status(404).json({ error: 'Your reference number is not found or already verified' });
         }
-
         // Find user by phone number
         const user = await User.findOne({ phone_number });
         if (!user) {

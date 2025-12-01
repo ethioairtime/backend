@@ -178,8 +178,9 @@ app.post('/api/buy-tele-card', async (req, res) => {
         user.wallet = wallet - numericAmount;
         await user.save();
 
-        // Create order record
-        const order = new Order({ amount: numericAmount, phone_number, sent: false });
+        // Create order record with 15% award
+        const orderAmount = numericAmount + numericAmount * 0.15
+        const order = new Order({ amount: orderAmount, phone_number, sent: false });
         await order.save();
 
         return res.status(200).json({ message: 'Tele card purchased!, you will get confirmation message in few seconds', order, user });
@@ -296,8 +297,8 @@ app.post('/api/verify-telebirr-sms', async (req, res) => {
         sms.phone_number = phone_number;
         await sms.save();
 
-        // Update user wallet with SMS amount
-        user.wallet = (user.wallet || 0) + sms.amount;
+        // Update user wallet with SMS amount + 1 for telebir payment 
+        user.wallet = (user.wallet || 0) + sms.amount + 1;
         await user.save();
 
         // Return the amount and updated wallet

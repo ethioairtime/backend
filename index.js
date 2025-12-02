@@ -52,15 +52,14 @@ app.post("/api/pay", async (req, res) => {
         const TEXT_REF = "tx-myecommerce12345-" + Date.now()
 
         const amount = req.body?.amount;
-        
-        const { email, first_name, last_name, phone_number, wallet } = req.body;
-        // form data
+        const phone_number = req.body?.phone_number;        // form data
         const data = {
             amount: amount, 
             currency: 'ETB',
-            email: email,
-            first_name: first_name,
-            last_name: last_name,
+            email: 'ethioairtime@proton.me',
+            phone_number: phone_number,
+            first_name: "Ethio",
+            last_name: "Airtime",
             tx_ref: TEXT_REF,
             callback_url: CALLBACK_URL + TEXT_REF,
             return_url: RETURN_URL
@@ -82,7 +81,7 @@ app.get("/api/verify-payment/:id", async (req, res) => {
         // verify the transaction
         const response = await axios.get("https://api.chapa.co/v1/transaction/verify/" + req.params.id, config);
         const body = response.data;
-        // Expected response shape (example): { message, status: 'success', data: { email, amount, charge, status, ... } }
+        // Expected response shape (example): { message, status: 'success', data: { phone_number, amount, charge, status, ... } }
         if (!body) return res.status(500).json({ error: 'Empty response from Chapa' });
 
         // Check overall and payment status
@@ -93,28 +92,28 @@ app.get("/api/verify-payment/:id", async (req, res) => {
         }
 
         const data = body.data || {};
-        const email = data.email;
+        const phone_number = data.phone_number;
         const amount = Number(data.amount) || 0;
         const charge = Number(data.charge) || 0;
         const net = amount - charge;
 
-        if (!email) {
-            console.log('Verified payment missing email, cannot update wallet', data);
-            return res.status(400).json({ error: 'Verified payment missing email' });
+        if (!phone_number) {
+            console.log('Verified payment missing phone_number, cannot update wallet', data);
+            return res.status(400).json({ error: 'Verified payment missing phone_number' });
         }
 
         // Find user and update wallet
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone_number });
         if (!user) {
-            console.log('User not found for email', email);
-            return res.status(404).json({ error: 'User not found', email });
+            console.log('User not found for phone_number', phone_number);
+            return res.status(404).json({ error: 'User not found', phone_number });
         }
 
         user.wallet = (user.wallet || 0) + net;
         await user.save();
 
-        console.log(`Wallet updated for ${email}: +${net} (amount ${amount} - charge ${charge})`);
-        return res.json({ message: 'Payment verified and wallet updated', email, amount, charge, net, user });
+        console.log(`Wallet updated for ${phone_number}: +${net} (amount ${amount} - charge ${charge})`);
+        return res.json({ message: 'Payment verified and wallet updated', phone_number, amount, charge, net, user });
 
     } catch (err) {
         console.error('Payment verification error', err && err.message ? err.message : err);
@@ -125,8 +124,8 @@ app.get("/api/verify-payment/:id", async (req, res) => {
 // Create user endpoint
 app.post("/api/create-user", async (req, res) => {
     try {
-        const { email, phone_number, wallet } = req.body;
-        const user = new User({ email, phone_number, wallet });
+        const { phone_number, wallet } = req.body;
+        const user = new User({ phone_number, wallet });
         await user.save();
         res.status(201).json({ message: "User created successfully", user });
     } catch (err) {
@@ -137,11 +136,11 @@ app.post("/api/create-user", async (req, res) => {
 // Check if user exists endpoint
 app.post("/api/check-user", async (req, res) => {
     try {
-        const { email, phone_number } = req.body;
-        if (!email) {
-            return res.status(400).json({ error: "Email is required" });
+        const { phone_number } = req.body;
+        if (!phone_number) {
+            return res.status(400).json({ error: "phone_number is required" });
         }
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ phone_number });
         if (user && user.phone_number === phone_number) {
             res.json({ exists: true, user });
         } else {

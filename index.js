@@ -296,7 +296,7 @@ app.post('/api/verify-telebirr-sms', async (req, res) => {
         });
         
         if (!sms) {
-            return res.status(404).json({ error: 'Your reference number is not found or already verified' });
+            return res.status(404).json({ error: 'ይቅርታ! ክፍያዎን ማረጋገጥ አልተቻለም። እባኮት እንደገና ይሞክሩ።' });
         }
         // Find user by phone number
         const user = await User.findOne({ phone_number });
@@ -315,7 +315,7 @@ app.post('/api/verify-telebirr-sms', async (req, res) => {
 
         // Return the amount and updated wallet
         return res.status(200).json({ 
-            message: `Reference Number verified successfully, ETB ${sms.amount} was added to your wallet`, 
+            message: `${sms.amount + 1} ብር በተሳካ ሁኔታ ዋሌቶ ላይ ተጨምሯል።`, 
             amount: sms.amount,
             reference_number: sms.reference_number,
             verified: sms.verified,
